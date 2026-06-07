@@ -1,0 +1,15 @@
+[package]
+name = "aiwt"
+version = "0.1.0"
+edition = "2024"
+description = "AI WorkTree: tmux + AI + git worktree を統合管理する汎用CLI"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = { version = "4.6.5", features = ["unstable-dynamic"] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+[profile.release]
+strip = true
+lto = true

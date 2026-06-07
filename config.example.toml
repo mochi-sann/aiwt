@@ -1,0 +1,58 @@
+# aiwt 設定サンプル
+#
+# 置き場所（優先順位 低→高）:
+#   1. グローバル : ~/.config/aiwt/config.toml
+#   2. プロジェクト: <リポジトリのルート>/.aiwt.toml
+#   3. 環境変数    : AIWT_AI_COMMAND / AIWT_BASE_BRANCH / AIWT_WORKTREE_DIR /
+#                    AIWT_SESSION_PREFIX / AIWT_AUTO_START_AI
+#   4. CLI フラグ  : --ai-command / --base / --worktree-dir / --config
+#
+# 高優先のレイヤーで指定した値だけが下位を上書きします（未指定は据え置き）。
+
+# AI 起動コマンド。windows を指定しない場合のデフォルト pane で使われます。
+# 例: "claude {context_arg}" / "aider {context_arg}" / "codex"
+ai_command = "claude {context_arg}"
+
+# worktree 作成時に AI を自動起動するか（windows 未指定時のデフォルト構成に影響）。
+auto_start_ai = true
+
+# ベースブランチ。省略すると自動検出（origin/HEAD → main → master → 現在ブランチ）。
+# base_branch = "main"
+
+# worktree 置き場。省略すると <リポジトリの親>/worktrees。
+# 相対パスは「リポジトリのルート基準」、絶対パス・先頭 ~ にも対応。
+# worktree_dir = "../worktrees"
+
+# tmux セッション名のプレフィックス（例: "wt-" → wt-feature-foo）。
+# session_prefix = ""
+
+# worktree 内に書き出すコンテキストファイル名（mainからのコミット・差分・タスクを記録）。
+# context_file = ".aiwt-task.md"
+
+# ─────────────────────────────────────────────────────────────
+# tmux のウィンドウ / ペイン構成。
+# windows を書くと auto_start_ai / ai_command のデフォルト構成より優先されます。
+#
+# 使えるプレースホルダ（各 pane コマンド内で展開）:
+#   {branch}       ブランチ名
+#   {session}      tmux セッション名
+#   {worktree}     worktree の絶対パス
+#   {repo_root}    元リポジトリのルート
+#   {base_branch}  ベースブランチ
+#   {context_file} コンテキストファイルの絶対パス
+#   {context_arg}  コンテキストがあれば "$(cat <file>)"、なければ空
+#   {task}         new に渡したタスク文字列
+# ─────────────────────────────────────────────────────────────
+
+# [[windows]]
+# name = "code"               # 省略時は main / w1 / w2 ...
+# layout = "main-vertical"    # tmux select-layout 名（main-vertical, tiled など）
+# panes = [
+#   "claude {context_arg}",   # pane 0: AI
+#   "nvim .",                 # pane 1: エディタ
+#   "",                       # pane 2: 空シェル（コマンドなし）
+# ]
+#
+# [[windows]]
+# name = "dev"
+# panes = ["pnpm dev"]
