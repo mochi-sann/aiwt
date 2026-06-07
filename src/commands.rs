@@ -510,6 +510,19 @@ pub fn show_config(config: &Config) -> Result<()> {
 mod tests {
     use super::*;
 
+    /// テスト用に worktree_dir だけ差し替えた Config を作る。
+    fn cfg_with_worktree_dir(dir: Option<&str>) -> Config {
+        Config {
+            ai_command: "claude".into(),
+            auto_start_ai: true,
+            base_branch: None,
+            worktree_dir: dir.map(|s| s.to_string()),
+            session_prefix: String::new(),
+            context_file: ".aiwt-task.md".into(),
+            windows: None,
+        }
+    }
+
     #[test]
     fn session_name_replaces_slashes_and_adds_prefix() {
         assert_eq!(session_name("", "feature/foo"), "feature-foo");
@@ -526,5 +539,37 @@ mod tests {
         assert_eq!(expand_tilde("~/wt"), PathBuf::from("/home/u/wt"));
         assert_eq!(expand_tilde("/abs/path"), PathBuf::from("/abs/path"));
         assert_eq!(expand_tilde("rel/path"), PathBuf::from("rel/path"));
+    }
+
+    #[test]
+    fn worktree_base_defaults_to_sibling_dir() {
+        let repo = Path::new("/home/u/proj");
+        let base = resolve_worktree_base(repo, &cfg_with_worktree_dir(None)).unwrap();
+        assert_eq!(base, PathBuf::from("/home/u/worktrees"));
+    }
+
+    #[test]
+    fn worktree_base_absolute_is_used_as_is() {
+        let repo = Path::new("/home/u/proj");
+        let base = resolve_worktree_base(repo, &cfg_with_worktree_dir(Some("/var/wt"))).unwrap();
+        assert_eq!(base, PathBuf::from("/var/wt"));
+    }
+
+    #[test]
+    fn worktree_base_relative_resolves_against_repo() {
+        let repo = Path::new("/home/u/proj");
+        let base = resolve_worktree_base(repo, &cfg_with_worktree_dir(Some("../wt"))).unwrap();
+        assert_eq!(base, PathBuf::from("/home/u/proj/../wt"));
+    }
+
+    #[test]
+    fn worktree_base_expands_tilde() {
+        // SAFETY: テストはシングルスレッドで環境変数を一時設定する。
+        unsafe {
+            std::env::set_var("HOME", "/home/u");
+        }
+        let repo = Path::new("/home/u/proj");
+        let base = resolve_worktree_base(repo, &cfg_with_worktree_dir(Some("~/wt"))).unwrap();
+        assert_eq!(base, PathBuf::from("/home/u/wt"));
     }
 }

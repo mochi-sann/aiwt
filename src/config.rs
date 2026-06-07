@@ -281,4 +281,43 @@ mod tests {
         assert_eq!(windows.len(), 1);
         assert_eq!(windows[0].name.as_deref(), Some("dev"));
     }
+
+    #[test]
+    fn parse_toml_with_windows() {
+        let src = r#"
+ai_command = "aider"
+session_prefix = "wt-"
+
+[[windows]]
+name = "code"
+layout = "main-vertical"
+panes = ["claude", "nvim"]
+
+[[windows]]
+panes = ["pnpm dev"]
+"#;
+        let raw: RawConfig = toml::from_str(src).unwrap();
+        assert_eq!(raw.ai_command.as_deref(), Some("aider"));
+        assert_eq!(raw.session_prefix.as_deref(), Some("wt-"));
+        let windows = raw.windows.expect("windows");
+        assert_eq!(windows.len(), 2);
+        assert_eq!(windows[0].name.as_deref(), Some("code"));
+        assert_eq!(windows[0].layout.as_deref(), Some("main-vertical"));
+        assert_eq!(windows[0].panes, vec!["claude", "nvim"]);
+        assert_eq!(windows[1].name, None);
+        assert_eq!(windows[1].panes, vec!["pnpm dev"]);
+    }
+
+    #[test]
+    fn parse_toml_rejects_unknown_fields() {
+        // deny_unknown_fields によりタイポを検出できる。
+        assert!(toml::from_str::<RawConfig>("unknown_key = 1").is_err());
+    }
+
+    #[test]
+    fn parse_empty_toml_is_all_none() {
+        let raw: RawConfig = toml::from_str("").unwrap();
+        assert!(raw.ai_command.is_none());
+        assert!(raw.windows.is_none());
+    }
 }

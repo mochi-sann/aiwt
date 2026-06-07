@@ -84,9 +84,8 @@ pub fn status_short(repo: &Path) -> Result<String> {
     git(repo, &["status", "--short"])
 }
 
-/// worktree 一覧を (path, branch) で返す。
-pub fn worktree_list(repo: &Path) -> Result<Vec<(PathBuf, String)>> {
-    let out = git(repo, &["worktree", "list", "--porcelain"])?;
+/// `git worktree list --porcelain` の出力を (path, branch) に解析する。
+fn parse_worktree_porcelain(out: &str) -> Vec<(PathBuf, String)> {
     let mut result = Vec::new();
     let mut path: Option<PathBuf> = None;
     let mut branch = String::new();
@@ -107,7 +106,13 @@ pub fn worktree_list(repo: &Path) -> Result<Vec<(PathBuf, String)>> {
     if let Some(prev) = path.take() {
         result.push((prev, branch));
     }
-    Ok(result)
+    result
+}
+
+/// worktree 一覧を (path, branch) で返す。
+pub fn worktree_list(repo: &Path) -> Result<Vec<(PathBuf, String)>> {
+    let out = git(repo, &["worktree", "list", "--porcelain"])?;
+    Ok(parse_worktree_porcelain(&out))
 }
 
 /// 指定パスが worktree として登録済みか。
@@ -124,6 +129,16 @@ pub fn merged_branches(repo: &Path, base: &str) -> Result<Vec<String>> {
     Ok(out.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
 }
 
+/// `%(refname:short)|%(upstream:track)` 形式から gone なブランチ名を抽出する。
+fn parse_gone_branches(out: &str) -> Vec<String> {
+    out.lines()
+        .filter_map(|line| {
+            let (name, track) = line.split_once('|')?;
+            track.contains("gone").then(|| name.to_string())
+        })
+        .collect()
+}
+
 /// upstream が削除された（gone）ローカルブランチ一覧。
 pub fn gone_branches(repo: &Path) -> Result<Vec<String>> {
     let out = git(
@@ -134,13 +149,7 @@ pub fn gone_branches(repo: &Path) -> Result<Vec<String>> {
             "refs/heads/",
         ],
     )?;
-    Ok(out
-        .lines()
-        .filter_map(|line| {
-            let (name, track) = line.split_once('|')?;
-            track.contains("gone").then(|| name.to_string())
-        })
-        .collect())
+    Ok(parse_gone_branches(&out))
 }
 
 /// ベースブランチを検出する。
@@ -163,4 +172,67 @@ pub fn detect_base_branch(repo: &Path) -> Result<String> {
         return Err("ベースブランチを検出できません。設定 base_branch を指定してください".into());
     }
     Ok(current)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_worktree_porcelain_basic() {
+        let out = "\
+worktree /repo
+HEAD abc123
+branch refs/heads/main
+
+worktree /wt/feat-x
+HEAD def456
+branch refs/heads/feature/x
+";
+        let parsed = parse_worktree_porcelain(out);
+        assert_eq!(
+            parsed,
+            vec![
+                (PathBuf::from("/repo"), "main".to_string()),
+                (PathBuf::from("/wt/feat-x"), "feature/x".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn parse_worktree_porcelain_detached() {
+        let out = "\
+worktree /repo
+HEAD abc123
+branch refs/heads/main
+
+worktree /wt/loose
+HEAD def456
+detached
+";
+        let parsed = parse_worktree_porcelain(out);
+        assert_eq!(parsed[1], (PathBuf::from("/wt/loose"), "(detached)".to_string()));
+    }
+
+    #[test]
+    fn parse_worktree_porcelain_empty() {
+        assert!(parse_worktree_porcelain("").is_empty());
+    }
+
+    #[test]
+    fn parse_gone_branches_filters_only_gone() {
+        let out = "\
+main|
+feature/x|[ahead 1]
+old/feat|[gone]
+another|[behind 2, gone]
+";
+        let gone = parse_gone_branches(out);
+        assert_eq!(gone, vec!["old/feat".to_string(), "another".to_string()]);
+    }
+
+    #[test]
+    fn parse_gone_branches_handles_empty() {
+        assert!(parse_gone_branches("").is_empty());
+    }
 }
