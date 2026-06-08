@@ -26,7 +26,11 @@ use config::{Config, Overrides};
 use git::repo_root;
 
 #[derive(Parser)]
-#[command(name = "aiwt", version, about = "tmux + AI + git worktree 統合管理ツール")]
+#[command(
+    name = "aiwt",
+    version,
+    about = "tmux + AI + git worktree 統合管理ツール"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,

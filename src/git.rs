@@ -65,7 +65,12 @@ pub fn repo_root() -> Result<PathBuf> {
 pub fn branch_exists(repo: &Path, branch: &str) -> bool {
     git_ok(
         repo,
-        &["show-ref", "--verify", "--quiet", &format!("refs/heads/{branch}")],
+        &[
+            "show-ref",
+            "--verify",
+            "--quiet",
+            &format!("refs/heads/{branch}"),
+        ],
     )
 }
 
@@ -126,7 +131,11 @@ pub fn merged_branches(repo: &Path, base: &str) -> Result<Vec<String>> {
         repo,
         &["branch", "--merged", base, "--format", "%(refname:short)"],
     )?;
-    Ok(out.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect())
+    Ok(out
+        .lines()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect())
 }
 
 /// `%(refname:short)|%(upstream:track)` 形式から gone なブランチ名を抽出する。
@@ -156,8 +165,10 @@ pub fn gone_branches(repo: &Path) -> Result<Vec<String>> {
 /// origin/HEAD → main → master → 現在ブランチ の順。
 pub fn detect_base_branch(repo: &Path) -> Result<String> {
     // origin/HEAD のシンボリック参照（例: refs/remotes/origin/main）
-    if let Ok(sym) = git(repo, &["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"])
-        && let Some(name) = sym.rsplit('/').next()
+    if let Ok(sym) = git(
+        repo,
+        &["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
+    ) && let Some(name) = sym.strip_prefix("refs/remotes/origin/")
         && !name.is_empty()
     {
         return Ok(name.to_string());
@@ -211,7 +222,10 @@ HEAD def456
 detached
 ";
         let parsed = parse_worktree_porcelain(out);
-        assert_eq!(parsed[1], (PathBuf::from("/wt/loose"), "(detached)".to_string()));
+        assert_eq!(
+            parsed[1],
+            (PathBuf::from("/wt/loose"), "(detached)".to_string())
+        );
     }
 
     #[test]

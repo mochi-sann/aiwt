@@ -221,10 +221,16 @@ fn write_context_file(
     base_branch: &str,
     task: &str,
 ) -> Result<()> {
-    let commits = git::git(wt_path, &["log", &format!("{base_branch}..HEAD"), "--oneline"])
-        .unwrap_or_default();
-    let diff_stat = git::git(wt_path, &["diff", "--stat", &format!("{base_branch}...HEAD")])
-        .unwrap_or_default();
+    let commits = git::git(
+        wt_path,
+        &["log", &format!("{base_branch}..HEAD"), "--oneline"],
+    )
+    .unwrap_or_default();
+    let diff_stat = git::git(
+        wt_path,
+        &["diff", "--stat", &format!("{base_branch}...HEAD")],
+    )
+    .unwrap_or_default();
 
     let mut out = String::new();
     out.push_str(&format!("# worktree: {branch}\n\n"));
@@ -252,10 +258,13 @@ fn write_context_file(
 fn build_tmux_session(config: &Config, session: &str, cwd: &Path, vars: &Vars) -> Result<()> {
     let windows = config.resolved_windows();
     for (i, win) in windows.iter().enumerate() {
-        let win_name = win
-            .name
-            .clone()
-            .unwrap_or_else(|| if i == 0 { "main".into() } else { format!("w{i}") });
+        let win_name = win.name.clone().unwrap_or_else(|| {
+            if i == 0 {
+                "main".into()
+            } else {
+                format!("w{i}")
+            }
+        });
 
         if i == 0 {
             tmux::new_session(session, cwd, Some(&win_name))?;
@@ -287,7 +296,10 @@ pub fn ls(config: &Config) -> Result<()> {
     let repo_root = git::repo_root()?;
     let wt_base = resolve_worktree_base(&repo_root, config)?;
 
-    println!("{:<30} {:<35} {:<6} {:<7}", "SESSION", "BRANCH", "TMUX", "CLAUDE");
+    println!(
+        "{:<30} {:<35} {:<6} {:<7}",
+        "SESSION", "BRANCH", "TMUX", "CLAUDE"
+    );
     println!("{}", "-".repeat(80));
 
     let mut has_any = false;
@@ -339,7 +351,9 @@ pub fn prune(config: &Config, dry_run: bool, assume_yes: bool) -> Result<()> {
     let repo_root = git::repo_root()?;
     let base = resolve_base_branch(&repo_root, config)?;
 
-    let merged: HashSet<String> = git::merged_branches(&repo_root, &base)?.into_iter().collect();
+    let merged: HashSet<String> = git::merged_branches(&repo_root, &base)?
+        .into_iter()
+        .collect();
     let gone: HashSet<String> = git::gone_branches(&repo_root)?.into_iter().collect();
 
     let mut targets: Vec<(String, String)> = Vec::new();
@@ -452,7 +466,9 @@ fn sync_forward(repo_root: &Path, wt_path: &Path, branch: &str, session: &str) -
     let (checked_out, is_review) = if git::git_ok(repo_root, &["checkout", branch]) {
         (branch.to_string(), false)
     } else {
-        println!("⚠ {branch} は worktree で使用中のため、{review_branch} として確認用ブランチを作成します");
+        println!(
+            "⚠ {branch} は worktree で使用中のため、{review_branch} として確認用ブランチを作成します"
+        );
         if git::branch_exists(repo_root, &review_branch) {
             git::git_inherit(repo_root, &["branch", "-D", &review_branch])?;
         }
@@ -469,7 +485,10 @@ fn sync_forward(repo_root: &Path, wt_path: &Path, branch: &str, session: &str) -
         println!("  git -C {} checkout {root_branch}", repo_root.display());
         println!("  git -C {} branch -D {review_branch}", repo_root.display());
     } else {
-        println!("確認後は: git -C {} checkout {root_branch}", repo_root.display());
+        println!(
+            "確認後は: git -C {} checkout {root_branch}",
+            repo_root.display()
+        );
     }
     Ok(())
 }
@@ -486,7 +505,10 @@ pub fn show_config(config: &Config) -> Result<()> {
     );
     println!(
         "worktree_dir   = {}",
-        config.worktree_dir.as_deref().unwrap_or("(<repo親>/worktrees)")
+        config
+            .worktree_dir
+            .as_deref()
+            .unwrap_or("(<repo親>/worktrees)")
     );
     println!("session_prefix = {:?}", config.session_prefix);
     println!("context_file   = {}", config.context_file);

@@ -207,7 +207,10 @@ fn env_config() -> RawConfig {
         raw.session_prefix = Some(v);
     }
     if let Ok(v) = std::env::var("AIWT_AUTO_START_AI") {
-        raw.auto_start_ai = Some(matches!(v.to_ascii_lowercase().as_str(), "1" | "true" | "yes"));
+        raw.auto_start_ai = Some(matches!(
+            v.to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes"
+        ));
     }
     raw
 }

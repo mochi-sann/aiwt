@@ -1,0 +1,91 @@
+name: release
+
+# GitHub の Release を publish したタイミングで各プラットフォーム向けに
+# バイナリをビルドし、その Release のアセットとして添付する。
+on:
+  release:
+    types: [published]
+
+# gh release upload で Release にアセットを書き込むために必要。
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            linker: gcc-aarch64-linux-gnu
+          - os: macos-latest
+            target: x86_64-apple-darwin
+          - os: macos-latest
+            target: aarch64-apple-darwin
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      # aarch64 Linux は ubuntu(x86_64) からのクロスコンパイルなので
+      # 専用のリンカを入れて cargo に使わせる。
+      - name: Install cross linker
+        if: matrix.linker != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ${{ matrix.linker }}
+          echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      # tag_name はユーザ入力なので run: に直接展開せず env 経由で渡す。
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          dist="aiwt-${TAG}-${TARGET}"
+          mkdir "$dist"
+          cp "target/${TARGET}/release/aiwt" "$dist/"
+          cp README.md LICENSE* "$dist/" 2>/dev/null || true
+          tar czf "$dist.tar.gz" "$dist"
+          echo "ASSET=$dist.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          TARGET: ${{ matrix.target }}
+        run: |
+          dist="aiwt-${TAG}-${TARGET}"
+          mkdir "$dist"
+          cp "target/${TARGET}/release/aiwt.exe" "$dist/"
+          7z a "$dist.zip" "$dist"
+          echo "ASSET=$dist.zip" >> "$GITHUB_ENV"
+
+      - name: Upload to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" "$ASSET" --clobber
