@@ -168,7 +168,7 @@ pub fn detect_base_branch(repo: &Path) -> Result<String> {
     if let Ok(sym) = git(
         repo,
         &["symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"],
-    ) && let Some(name) = sym.rsplit('/').next()
+    ) && let Some(name) = sym.strip_prefix("refs/remotes/origin/")
         && !name.is_empty()
     {
         return Ok(name.to_string());
