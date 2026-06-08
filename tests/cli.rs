@@ -132,9 +132,16 @@ fn completions_runs_without_repo() {
 fn config_reports_overrides() {
     let t = TestRepo::new();
     let out = t.run(&["config"]);
-    assert!(out.status.success(), "stderr: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     let s = stdout(&out);
-    assert!(s.contains("echo hi"), "ai_command の上書きが反映されていない:\n{s}");
+    assert!(
+        s.contains("echo hi"),
+        "ai_command の上書きが反映されていない:\n{s}"
+    );
 }
 
 // ───────────────────────── tmux 必須 ─────────────────────────
@@ -148,13 +155,21 @@ fn new_creates_worktree_and_ls_lists_it() {
     let t = TestRepo::new();
 
     let out = t.run(&["new", "feat/x"]);
-    assert!(out.status.success(), "new 失敗: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "new 失敗: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     assert!(t.worktree("feat/x").exists(), "worktree が作られていない");
     // コンテキストファイルが書かれている
     assert!(t.worktree("feat/x").join(".aiwt-task.md").exists());
 
     let ls = t.run(&["ls"]);
-    assert!(stdout(&ls).contains("feat/x"), "ls に branch が出ない:\n{}", stdout(&ls));
+    assert!(
+        stdout(&ls).contains("feat/x"),
+        "ls に branch が出ない:\n{}",
+        stdout(&ls)
+    );
 }
 
 #[test]
@@ -166,7 +181,10 @@ fn new_with_task_writes_context_file() {
     let t = TestRepo::new();
     t.run(&["new", "feat/task", "これはタスク説明"]);
     let ctx = fs::read_to_string(t.worktree("feat/task").join(".aiwt-task.md")).unwrap();
-    assert!(ctx.contains("これはタスク説明"), "タスクが書かれていない:\n{ctx}");
+    assert!(
+        ctx.contains("これはタスク説明"),
+        "タスクが書かれていない:\n{ctx}"
+    );
     assert!(ctx.contains("# worktree: feat/task"));
 }
 
@@ -181,7 +199,11 @@ fn rm_removes_worktree_and_branch() {
     assert!(t.worktree("feat/y").exists());
 
     let out = t.run(&["rm", "feat/y", "-y"]);
-    assert!(out.status.success(), "rm 失敗: {}", String::from_utf8_lossy(&out.stderr));
+    assert!(
+        out.status.success(),
+        "rm 失敗: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
     assert!(!t.worktree("feat/y").exists(), "worktree が消えていない");
     assert!(!t.branch_exists("feat/y"), "branch が消えていない");
 }
@@ -209,12 +231,21 @@ fn prune_removes_merged_and_keeps_active() {
     let s = stdout(&dry);
     assert!(s.contains("feat/merged"), "dry-run に対象が出ない:\n{s}");
     assert!(s.contains("dry-run"));
-    assert!(t.worktree("feat/merged").exists(), "dry-run で消えてはいけない");
+    assert!(
+        t.worktree("feat/merged").exists(),
+        "dry-run で消えてはいけない"
+    );
 
     let out = t.run(&["prune", "-y"]);
     assert!(out.status.success());
-    assert!(!t.worktree("feat/merged").exists(), "merged が掃除されていない");
-    assert!(t.worktree("feat/active").exists(), "active を消してはいけない");
+    assert!(
+        !t.worktree("feat/merged").exists(),
+        "merged が掃除されていない"
+    );
+    assert!(
+        t.worktree("feat/active").exists(),
+        "active を消してはいけない"
+    );
 
     t.run(&["rm", "feat/active", "-y"]);
 }
@@ -229,7 +260,11 @@ fn new_reuses_existing_worktree() {
     t.run(&["new", "feat/dup"]);
     let out = t.run(&["new", "feat/dup"]);
     assert!(out.status.success());
-    assert!(stdout(&out).contains("再利用"), "再利用メッセージが出ない:\n{}", stdout(&out));
+    assert!(
+        stdout(&out).contains("再利用"),
+        "再利用メッセージが出ない:\n{}",
+        stdout(&out)
+    );
 
     t.run(&["rm", "feat/dup", "-y"]);
 }
