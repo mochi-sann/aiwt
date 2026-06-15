@@ -113,14 +113,6 @@ panes = ["pnpm dev"]
 | `{context_arg}` | コンテキストがあれば `"$(cat <file>)"`、なければ空 |
 | `{task}` | `new` に渡したタスク文字列 |
 
-## 旧スクリプトからの移行
-
-| 旧 | 新 |
-| --- | --- |
-| `wt-new <b> [task]` | `aiwt new <b> [task]` |
-| `wt-ls` | `aiwt ls` |
-| `wt-rm <b>` | `aiwt rm <b>` |
-| `wt-sync [-r] <b>` | `aiwt sync [--reverse] <b>` |
 
 旧版で `claude`・`main`・`../worktrees` に固定だった部分が、すべて設定・環境変数・
 フラグで変更できるようになっています。シェルエイリアス（`alias wt-new='aiwt new'`
